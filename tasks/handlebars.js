@@ -1,9 +1,9 @@
 /*
- * 
+ *
  * Task: Handlebars
  * Description: Compile handlebars templates to JST files
  * Dependencies: handlebars
- * 
+ *
  */
 
 module.exports = function(grunt) {
@@ -13,27 +13,34 @@ module.exports = function(grunt) {
   grunt.registerMultiTask('handlebars', 'Precompile Handlebars template', function() {
     var self = this;
     var done = self.async();
-    var templateDir = this.file.src;
-    var truncateFileCmd = '> ' +this.file.dest;
 
-    var handlebarsCmd = __dirname + '/../node_modules/.bin/handlebars -m ' + templateDir + '/*.handlebars -f ' + this.file.dest;
+    this.files.forEach(function(f) {
+      var src = f.src.filter(function(filepath) {
+        // Warn on and remove invalid source files (if nonull was set).
+        if (!grunt.file.exists(filepath)) {
+          grunt.log.warn('Source file "' + filepath + '" not found.');
+          return false;
+        } else {
+          return true;
+        }
+      });
 
-    // Check on which platform node is running.
-    var finalCmd;
-    if (process.platform == "win32") {
-      // win32 cmd doesn't know what "&&" is and is also not able to use wildcards
-      // anyway this will match all the files in the template dir anyway.
-      finalCmd =  __dirname + '/../node_modules/.bin/handlebars -m ' + templateDir + '/ -f ' + this.file.dest;
-    } else {
-      // others platform, set to the default command
-      finalCmd = truncateFileCmd +' && '+ handlebarsCmd;
-    }
+      var destDir = f.dest.replace(/[^\/]+$/, '');
 
-    exec(finalCmd, function(err, stdout, stderr) {
-      if (err) {
-        grunt.fail.fatal(stderr);
+      if (!grunt.file.isDir(destDir)) {
+        grunt.file.mkdir(destDir);
       }
-      done();
+
+      var templateDir = src[0];
+      var truncateFileCmd = '> ' + f.dest;
+      var handlebarsCmd = __dirname + '/../node_modules/.bin/handlebars -m ' + templateDir + '/*.handlebars -f ' + f.dest;
+
+      exec(truncateFileCmd +' && '+ handlebarsCmd, function(err, stdout, stderr) {
+        if (err) {
+          grunt.fail.fatal(stderr);
+        }
+        done();
+      });
     });
   });
 };
